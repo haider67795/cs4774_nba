@@ -11,8 +11,8 @@ from sklearn.metrics import classification_report, accuracy_score, f1_score, con
 # --------------------------------------------------
 # Ensure these files are in your local directory
 try:
-    reg_df = pd.read_csv("nba_reg_normalized.csv")
-    ply_df = pd.read_csv("nba_playoffs_2004_2026.csv")
+    reg_df = pd.read_csv("data/nba_reg_normalized.csv")
+    ply_df = pd.read_csv("data/nba_playoffs_2004_2026.csv")
 except FileNotFoundError as e:
     print(f"Error: Missing required CSV files. {e}")
     exit()
@@ -37,9 +37,24 @@ df["MADE_CONF_FINALS"] = (df["PLAYOFF_WINS"] >= 8).astype(int)
 # --------------------------------------------------
 # 3. FEATURE SELECTION (9 PACE-ADJUSTED METRICS) [cite: 12, 13]
 # --------------------------------------------------
+# features = [
+#     "NET_RATING", "OFF_RATING_CUSTOM", "FG_PCT", "FG3_PCT",
+#     "FT_PCT", "AST_PER_100", "REB_PER_100", "TOV_PER_100", "BLK_PER_100"
+# ]
+
+# features = ["OFF_RATING_CUSTOM", "FG_PCT", "FG3_PCT",
+#     "FT_PCT", "AST_PER_100", "REB_PER_100", "TOV_PER_100", "BLK_PER_100"
+# ]
+
 features = [
-    "NET_RATING", "OFF_RATING_CUSTOM", "FG_PCT", "FG3_PCT",
-    "FT_PCT", "AST_PER_100", "REB_PER_100", "TOV_PER_100", "BLK_PER_100"
+    "OFF_RATING_CUSTOM",
+    "DEF_RATING_CUSTOM",
+    "FG_PCT",
+    "FG3_PCT",
+    "FT_PCT",
+    "AST_PER_100",
+    "REB_PER_100",
+    "TOV_PER_100"
 ]
 df = df.dropna(subset=features).copy()
 

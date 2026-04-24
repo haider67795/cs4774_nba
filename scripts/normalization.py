@@ -27,8 +27,8 @@ def normalize_nba_data(input_file, output_file, is_playoffs=False):
 
 
 # Apply to Regular Season
-normalize_nba_data('nba_regular_season_2004_2026.csv',
-                   'nba_reg_normalized.csv')
+normalize_nba_data('data/nba_regular_season_2004_2026.csv',
+                   'data/nba_reg_normalized.csv')
 
 # Apply to Playoffs
-normalize_nba_data('nba_playoffs_2004_2026.csv', 'nba_ply_normalized.csv')
+normalize_nba_data('data/nba_playoffs_2004_2026.csv', 'data/nba_ply_normalized.csv')

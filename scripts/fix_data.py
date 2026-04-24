@@ -3,7 +3,7 @@ import time
 from nba_api.stats.endpoints import leaguegamelog
 
 
-def final_robust_patch(reg_file='nba_regular_season_2004_2026.csv', ply_file='nba_playoffs_2004_2026.csv'):
+def final_robust_patch(reg_file='data/nba_regular_season_2004_2026.csv', ply_file='data/nba_playoffs_2004_2026.csv'):
     # Targeting the specific failures from your last run
     targets = [
         ('2011-12', 'Playoffs'),
@@ -60,6 +60,11 @@ def final_robust_patch(reg_file='nba_regular_season_2004_2026.csv', ply_file='nb
             df_agg['OFF_RATING_CUSTOM'] = (
                 df_agg['PTS'] / df_agg['POSS']) * 100
 
+
+
+            df_agg['OPP_PTS'] = df_agg['PTS'] - df_agg['PLUS_MINUS']
+            df_agg['DEF_RATING_CUSTOM'] = (df_agg['OPP_PTS'] / df_agg['POSS']) * 100
+
             # 6. Re-calculate League Ranks for this season
             rank_cols = ['GP', 'W', 'L', 'W_PCT', 'MIN', 'FGM', 'FGA', 'FG_PCT', 'FG3M',
                          'FG3A', 'FG3_PCT', 'FTM', 'FTA', 'FT_PCT', 'OREB', 'DREB',
@@ -88,5 +93,40 @@ def final_robust_patch(reg_file='nba_regular_season_2004_2026.csv', ply_file='nb
             print(f"FAILED {season} {s_type}: {e}")
 
 
+
+import pandas as pd
+
+def add_defensive_metrics(reg_file='data/nba_regular_season_2004_2026.csv', ply_file='data/nba_playoffs_2004_2026.csv'):
+    # Process both the regular season and playoff files
+    files = [reg_file, ply_file]
+
+    for file_path in files:
+        print(f"Processing {file_path}...")
+        try:
+            # 1. Load the existing data
+            df = pd.read_csv(file_path)
+
+            # 2. Ensure POSS is calculated (re-calculating just to be safe)
+            if 'POSS' not in df.columns:
+                df['POSS'] = 0.96 * (df['FGA'] + df['TOV'] + (0.44 * df['FTA']) - df['OREB'])
+
+            # 3. Calculate Opponent Points
+            df['OPP_PTS'] = df['PTS'] - df['PLUS_MINUS']
+
+            # 4. Calculate Defensive Rating (Points Allowed per 100 Possessions)
+            df['DEF_RATING_CUSTOM'] = (df['OPP_PTS'] / df['POSS']) * 100
+
+            # 5. Calculate Stocks (Steals + Blocks) per 100 Possessions
+            df['STOCKS_PER_100'] = ((df['STL'] + df['BLK']) / df['POSS']) * 100
+
+            # 6. Overwrite the original CSV with the new columns included
+            df.to_csv(file_path, index=False)
+            
+            print(f"SUCCESS: Defensive metrics added to {file_path}.")
+
+        except Exception as e:
+            print(f"FAILED on {file_path}: {e}")
+
 if __name__ == "__main__":
-    final_robust_patch()
+    add_defensive_metrics()
+
