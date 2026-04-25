@@ -4,8 +4,18 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, accuracy_score, f1_score, confusion_matrix
-
+from sklearn.metrics import (
+    classification_report,
+    accuracy_score,
+    f1_score,
+    confusion_matrix,
+    roc_curve,
+    auc,
+    precision_recall_curve,
+    average_precision_score,
+    brier_score_loss,
+)
+from sklearn.calibration import calibration_curve
 # --------------------------------------------------
 # 1. DATA LOADING (2004 - 2026 Season Range) [cite: 6, 56]
 # --------------------------------------------------
@@ -163,3 +173,171 @@ def generate_graphs(model_qual, model_conf, features):
 
 generate_graphs(model_qual, model_conf, features)
 print("\nSuccess! Models trained, predictions saved, and graphs generated.")
+
+# --------------------------------------------------
+# 9. EXTRA EDA: ROC, PR, AND CALIBRATION PLOTS
+# --------------------------------------------------
+from pathlib import Path
+
+EDA_DIR = Path("eda_logreg")
+EDA_DIR.mkdir(exist_ok=True)
+
+# --------------------------------------------------
+# Choose the most recent season with valid labels for BOTH tasks.
+# This avoids errors when 2025-26 is still incomplete.
+# --------------------------------------------------
+eda_df = None
+eda_conf_df = None
+eda_season = None
+
+for season in sorted(df["SEASON_ID"].dropna().unique(), reverse=True):
+    season_df = df[df["SEASON_ID"] == season].copy()
+
+    # Need both classes present for playoff qualification EDA
+    if season_df["MADE_PLAYOFFS"].nunique() < 2:
+        continue
+
+    conf_df = season_df[season_df["MADE_PLAYOFFS"] == 1].copy()
+
+    # Need both classes present for conference-finals EDA
+    if len(conf_df) == 0 or conf_df["MADE_CONF_FINALS"].nunique() < 2:
+        continue
+
+    eda_df = season_df
+    eda_conf_df = conf_df
+    eda_season = season
+    break
+
+if eda_df is None:
+    print("WARNING: No completed season found with valid labels for extra EDA. Skipping Section 9.")
+else:
+    print(f"\nUsing {eda_season} for extra EDA plots.\n")
+
+    # Predict probabilities for the selected EDA season
+    eda_df["PROB_QUAL"] = model_qual.predict_proba(
+        scaler_qual.transform(eda_df[features])
+    )[:, 1]
+
+    eda_conf_df["PROB_CONF"] = model_conf.predict_proba(
+        scaler_conf.transform(eda_conf_df[features])
+    )[:, 1]
+
+    # ------------------------------
+    # Plot 1: ROC Curves
+    # ------------------------------
+    plt.figure(figsize=(9, 7))
+
+    fpr_q, tpr_q, _ = roc_curve(eda_df["MADE_PLAYOFFS"], eda_df["PROB_QUAL"])
+    auc_q = auc(fpr_q, tpr_q)
+    plt.plot(fpr_q, tpr_q, linewidth=2, label=f"Playoff Qualification (AUC = {auc_q:.3f})")
+
+    fpr_c, tpr_c, _ = roc_curve(eda_conf_df["MADE_CONF_FINALS"], eda_conf_df["PROB_CONF"])
+    auc_c = auc(fpr_c, tpr_c)
+    plt.plot(fpr_c, tpr_c, linewidth=2, label=f"Conference Finals (AUC = {auc_c:.3f})")
+
+    plt.plot([0, 1], [0, 1], "k--", linewidth=1, label="Chance")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title(f"ROC Curves: Qualification vs. Conference Finals ({eda_season})")
+    plt.legend(loc="lower right")
+    plt.tight_layout()
+    plt.savefig(EDA_DIR / "roc_curves.png", dpi=200)
+    plt.close()
+
+    # ------------------------------
+    # Plot 2: Precision-Recall Curves
+    # ------------------------------
+    plt.figure(figsize=(9, 7))
+
+    precision_q, recall_q, _ = precision_recall_curve(
+        eda_df["MADE_PLAYOFFS"], eda_df["PROB_QUAL"]
+    )
+    ap_q = average_precision_score(eda_df["MADE_PLAYOFFS"], eda_df["PROB_QUAL"])
+    plt.plot(recall_q, precision_q, linewidth=2,
+             label=f"Playoff Qualification (AP = {ap_q:.3f})")
+
+    precision_c, recall_c, _ = precision_recall_curve(
+        eda_conf_df["MADE_CONF_FINALS"], eda_conf_df["PROB_CONF"]
+    )
+    ap_c = average_precision_score(eda_conf_df["MADE_CONF_FINALS"], eda_conf_df["PROB_CONF"])
+    plt.plot(recall_c, precision_c, linewidth=2,
+             label=f"Conference Finals (AP = {ap_c:.3f})")
+
+    plt.hlines(
+        eda_df["MADE_PLAYOFFS"].mean(),
+        xmin=0,
+        xmax=1,
+        linestyles="--",
+        linewidth=1,
+        label=f"Qualification baseline = {eda_df['MADE_PLAYOFFS'].mean():.3f}"
+    )
+    plt.hlines(
+        eda_conf_df["MADE_CONF_FINALS"].mean(),
+        xmin=0,
+        xmax=1,
+        linestyles=":",
+        linewidth=1,
+        label=f"Conference Finals baseline = {eda_conf_df['MADE_CONF_FINALS'].mean():.3f}"
+    )
+
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.title(f"Precision-Recall Curves: Qualification vs. Conference Finals ({eda_season})")
+    plt.legend(loc="lower left")
+    plt.tight_layout()
+    plt.savefig(EDA_DIR / "precision_recall_curves.png", dpi=200)
+    plt.close()
+
+    # ------------------------------
+    # Plot 3: Calibration Curves
+    # ------------------------------
+    plt.figure(figsize=(9, 7))
+
+    frac_pos_q, mean_pred_q = calibration_curve(
+        eda_df["MADE_PLAYOFFS"], eda_df["PROB_QUAL"], n_bins=8, strategy="quantile"
+    )
+    brier_q = brier_score_loss(eda_df["MADE_PLAYOFFS"], eda_df["PROB_QUAL"])
+    plt.plot(mean_pred_q, frac_pos_q, marker="o", linewidth=2,
+             label=f"Playoff Qualification (Brier = {brier_q:.3f})")
+
+    frac_pos_c, mean_pred_c = calibration_curve(
+        eda_conf_df["MADE_CONF_FINALS"], eda_conf_df["PROB_CONF"], n_bins=8, strategy="quantile"
+    )
+    brier_c = brier_score_loss(eda_conf_df["MADE_CONF_FINALS"], eda_conf_df["PROB_CONF"])
+    plt.plot(mean_pred_c, frac_pos_c, marker="o", linewidth=2,
+             label=f"Conference Finals (Brier = {brier_c:.3f})")
+
+    plt.plot([0, 1], [0, 1], "k--", linewidth=1, label="Perfect calibration")
+    plt.xlabel("Mean Predicted Probability")
+    plt.ylabel("Observed Fraction Positive")
+    plt.title(f"Calibration Curves: Qualification vs. Conference Finals ({eda_season})")
+    plt.legend(loc="upper left")
+    plt.tight_layout()
+    plt.savefig(EDA_DIR / "calibration_curves.png", dpi=200)
+    plt.close()
+
+    # ------------------------------
+    # Summary metrics
+    # ------------------------------
+    print("\n=== Extra Logistic Regression EDA ===\n")
+    print(f"Season used for EDA: {eda_season}\n")
+
+    print(f"Playoff Qualification ROC AUC: {auc_q:.4f}")
+    print(f"Playoff Qualification AP:      {ap_q:.4f}")
+    print(f"Playoff Qualification Brier:   {brier_q:.4f}\n")
+
+    print(f"Conference Finals ROC AUC:     {auc_c:.4f}")
+    print(f"Conference Finals AP:          {ap_c:.4f}")
+    print(f"Conference Finals Brier:       {brier_c:.4f}\n")
+
+    print(f"Extra EDA plots saved to: {EDA_DIR.resolve()}")
+
+    # ROC AUC interpretation: 
+    # Playoff Qualification model has high Auc (~0.9)
+    # model is very good at distinguishing playoff vs non-playoff teams,
+    #makes sense because Net Rating dominates
+    #Conference Finals model: has lower AUC ( ~0.7):
+    #harder problem: We're distinguishing elite teams from other elite teams
+    #reflects real NBA uncertainty
+
+    

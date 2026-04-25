@@ -1,0 +1,20 @@
+The playoff qualification model has a high ROC AUC (≈0.9), indicating it is very effective
+at distinguishing playoff from non-playoff teams, which aligns with the dominance of overall 
+strength metrics like Net Rating. In contrast, the conference finals model has a lower 
+AUC (≈0.7), showing only moderate separation ability. This drop reflects the increased 
+uncertainty and competitive parity in the postseason, where top teams are harder to 
+distinguish. 
+
+
+For the precision-recall curve, the playoff qualification model looks extremely strong:
+an average precision of about 0.99 is far above the 0.533 baseline,which means the model
+is doing a much better job than chance at identifying which teams will make the playoffs
+The conference finals model is much harder, with an AP of 0.538 versus a 0.250 baseline;
+hat is still better than random, but it shows the task is much noisier and the model has a
+harder time finding the rare true positives among playoff teams.
+
+For the Calibration curve, the playoff qualification model has a very low Brier score of 0.039, 
+which means its predicted probabilities are very close to the actual outcomes and can be 
+trusted fairly well. The conference finals model’s Brier score of 0.188 is much worse,
+showing that its probability estimates are less reliable and more affected by the uncertainty 
+of deep playoff outcomes.
