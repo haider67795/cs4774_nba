@@ -1,16 +1,69 @@
-import numpy as np
+
 import pandas as pd
 import matplotlib.pyplot as plt
+import json
+import os
+
+CONFIG_PATH = "configs/random_forest_config.json"
 
 np.random.seed(42) #to make testing reproducable
-TEST = False
-TUNE = False
-MAX_DEPTH = 7
-MAX_FEATURES = 6
-TUNE_SEASON = "2024-25"
-PREDICT_SEASON = "2025-26"
-TRAINING_DATA = "../data/nba_model_training_data.csv"
+TEST = TUNE = MAX_DEPTH = MAX_FEATURES = TUNE_SEASON = PREDICT_SEASON = \
+    TRAINING_DATA = FEATURES = PER_100 = PLAYOFF_TREE_NO = CONF_TREE_NO = \
+    OUTPUT_PRED_DEST = OUTPUT_STAT_DEST = OUTPUT_TUNE_DEST = OUTPUT_COLS =  OUTPUT_TUNE_STATS_DEST = None
 STAB_CONST = 1e-10
+
+def load_config():
+    with open(CONFIG_PATH, "r") as f:
+        return json.load(f)
+
+def add_per_100_features(df):
+    df = df.copy()
+
+    df["AST_PER_100"] = 100 * df["AST"] / (df["POSS"] + STAB_CONST)
+    df["REB_PER_100"] = 100 * df["REB"] / (df["POSS"] + STAB_CONST)
+    df["TOV_PER_100"] = 100 * df["TOV"] / (df["POSS"] + STAB_CONST)
+    df["BLK_PER_100"] = 100 * df["BLK"] / (df["POSS"] + STAB_CONST)
+
+    return df
+
+def setup_model():
+    global TEST, TUNE, MAX_DEPTH, MAX_FEATURES, PREDICT_SEASON, TUNE_SEASON, \
+        TRAINING_DATA, PER_100, FEATURES, PLAYOFF_TREE_NO, CONF_TREE_NO, \
+        OUTPUT_PRED_DEST, OUTPUT_STAT_DEST, OUTPUT_TUNE_DEST, OUTPUT_COLS, OUTPUT_TUNE_STATS_DEST
+
+    config = load_config()
+    df = pd.read_csv(config["training_data"])
+
+    TEST = config["test"]
+    TUNE = config["tune"]
+    PER_100 = config["use_per_100"]
+    MAX_DEPTH = config["max_depth"]
+    MAX_FEATURES = config["max_features"]
+    PREDICT_SEASON = config["predict_season"]
+    TUNE_SEASON = config["tune_season"]
+    TRAINING_DATA = config["training_data"]
+    PLAYOFF_TREE_NO = config["playoff_trees"]
+    CONF_TREE_NO = config["conference_trees"]
+    OUTPUT_PRED_DEST = config["output_pred_dest"]
+    OUTPUT_STAT_DEST = config["output_stats_dest"]
+    OUTPUT_TUNE_DEST = config["output_tune_dest"]
+    OUTPUT_COLS = config["output_cols"]
+    OUTPUT_TUNE_STATS_DEST = config["output_tune_stats_dest"]
+
+    if PER_100:
+        df = add_per_100_features(df)
+        FEATURES = config["per_100_features"]
+    else:
+        FEATURES = config["raw_features"]
+
+    return df
+
+def create_output_dirs():
+    os.makedirs(OUTPUT_TUNE_DEST, exist_ok=True)
+    os.makedirs(OUTPUT_TUNE_STATS_DEST, exist_ok=True)
+    os.makedirs(os.path.dirname(OUTPUT_PRED_DEST), exist_ok=True)
+    os.makedirs(os.path.dirname(OUTPUT_STAT_DEST), exist_ok=True)
+
 
 def bootstrap_bounds(x, y):
     n = len(x)
@@ -218,21 +271,10 @@ def runTest():
     print("True labels: ", y)
 
 def tune_setup(model_no=0):
-    df = pd.read_csv(TRAINING_DATA)
+    df = setup_model()
+    create_output_dirs()
 
     print(df.columns)
-
-    feature_cols = [
-        "PLUS_MINUS",
-        "OFF_RATING_CUSTOM",
-        "FG_PCT",
-        "FG3_PCT",
-        "FT_PCT",
-        "AST",
-        "REB",
-        "TOV",
-        "BLK"
-    ]
 
     if model_no == 0:
         label_col = "MADE_PLAYOFFS"
@@ -246,19 +288,20 @@ def tune_setup(model_no=0):
     test_df = df[df["SEASON_ID"] == TUNE_SEASON]
 
 
-    X_train = train_df[feature_cols].to_numpy()
-    X_test = test_df[feature_cols].to_numpy()
+    X_train = train_df[FEATURES].to_numpy()
+    X_test = test_df[FEATURES].to_numpy()
 
     y_train = train_df[label_col].to_numpy()
     y_test = test_df[label_col].to_numpy()
 
-    return df, feature_cols, label_col, X_train, X_test, y_train, y_test, model_name
+    return df, label_col, X_train, X_test, y_train, y_test, model_name
 
 def run_tuning_depth_vs_features(X_train, X_test, y_train, y_test, model_name):
     total_tune_depth = 10
     total_tune_features = 9
 
     plt.figure()
+    rows = []
 
     for mf in range(2, total_tune_features + 1):
         f1_scores = []
@@ -277,6 +320,16 @@ def run_tuning_depth_vs_features(X_train, X_test, y_train, y_test, model_name):
             score = score_f1(y_test, predictions)
             f1_scores.append(score)
 
+            rows.append({
+                "model": model_name,
+                "max_depth": depth,
+                "max_features": mf,
+                "trees": 50,
+                "f1": score,
+                "actual_positives": int(sum(y_test)),
+                "predicted_positives": int(sum(predictions))
+            })
+
             print(model_name, "depth:", depth, "max features:", mf, "f1:", score)
 
         plt.plot(range(2, total_tune_depth + 1), f1_scores, marker="o", label=f"max_features={mf}")
@@ -287,20 +340,26 @@ def run_tuning_depth_vs_features(X_train, X_test, y_train, y_test, model_name):
     plt.legend()
     plt.tight_layout()
     file_name = model_name.replace(" ", "_").lower()
-    plt.savefig(f"../eval/forest_output_tuning/{file_name}_depth_features.png", dpi=300)
+    plt.savefig(f"{OUTPUT_TUNE_DEST}/{file_name}_depth_features.png", dpi=300)
     plt.close()
+
+    pd.DataFrame(rows).to_csv(
+        f"{OUTPUT_TUNE_STATS_DEST}/{file_name}_depth_features_stats.csv",
+        index=False
+    )
 
 def run_tuning_tree_no(X_train, X_test, y_train, y_test, model_name):
     tree_counts = [5, 10, 20, 50, 100, 200]
     f1_scores = []
 
-    depth = MAX_DEPTH
     max_features = int(np.sqrt(X_train.shape[1]))
+
+    rows = []
 
     for tree_no in tree_counts:
         forest = RandomForest(
             trees_num=tree_no,
-            depth=depth,
+            depth=MAX_DEPTH,
             features_max=max_features,
         )
 
@@ -309,6 +368,16 @@ def run_tuning_tree_no(X_train, X_test, y_train, y_test, model_name):
 
         score = score_f1(y_test, predictions)
         f1_scores.append(score)
+
+        rows.append({
+            "model": model_name,
+            "max_depth": MAX_DEPTH,
+            "max_features": max_features,
+            "trees": tree_no,
+            "f1": score,
+            "actual_positives": int(sum(y_test)),
+            "predicted_positives": int(sum(predictions))
+        })
 
         print(model_name, "tree_number:", tree_no, "f1:", score)
 
@@ -319,13 +388,18 @@ def run_tuning_tree_no(X_train, X_test, y_train, y_test, model_name):
     plt.title(model_name + " F1 vs Number of Trees")
     plt.tight_layout()
     file_name = model_name.replace(" ", "_").lower()
-    plt.savefig(f"../eval/forest_output_tuning/{file_name}_tree_no.png", dpi=300)
+    plt.savefig(f"{OUTPUT_TUNE_DEST}/{file_name}_tree_no.png", dpi=300)
     plt.close()
+
+    pd.DataFrame(rows).to_csv(
+        f"{OUTPUT_TUNE_STATS_DEST}/{file_name}_tree_no_stats.csv",
+        index=False
+    )
 
 def run_tuning(): #used to find the best hyperparameters for run()
 
     #model 0: Playoffs
-    df, feature_cols, label_col, X_train, X_test, y_train, y_test, model_name = tune_setup()
+    df, label_col, X_train, X_test, y_train, y_test, model_name = tune_setup()
 
     # -> testing depth_no and feature_no
     run_tuning_depth_vs_features(X_train, X_test, y_train, y_test, model_name)
@@ -334,7 +408,7 @@ def run_tuning(): #used to find the best hyperparameters for run()
     run_tuning_tree_no(X_train, X_test, y_train, y_test, model_name)
 
     #model 1: Conference Finals
-    df, feature_cols, label_col, X_train, X_test, y_train, y_test, model_name = tune_setup(1)
+    df, label_col, X_train, X_test, y_train, y_test, model_name = tune_setup(1)
 
     # -> testing depth_no and feature_no
     run_tuning_depth_vs_features(X_train, X_test, y_train, y_test, model_name)
@@ -344,31 +418,20 @@ def run_tuning(): #used to find the best hyperparameters for run()
 
 
 def run(): #runs predictions on the model using best hyperparameters
-    df = pd.read_csv(TRAINING_DATA)
-
-    feature_cols = [
-        "PLUS_MINUS",
-        "OFF_RATING_CUSTOM",
-        "FG_PCT",
-        "FG3_PCT",
-        "FT_PCT",
-        "AST",
-        "REB",
-        "TOV",
-        "BLK"
-    ]
+    df = setup_model()
+    create_output_dirs()
 
     train_df = df[df["SEASON_ID"] != PREDICT_SEASON]
     future_df = df[df["SEASON_ID"] == PREDICT_SEASON].copy()
 
-    X_train = train_df[feature_cols].to_numpy()
-    X_future = future_df[feature_cols].to_numpy()
+    X_train = train_df[FEATURES].to_numpy()
+    X_future = future_df[FEATURES].to_numpy()
 
     # model 0: PLAYOFFS
     y_train_playoffs = train_df["MADE_PLAYOFFS"].to_numpy()
 
     playoff_forest = RandomForest(
-        trees_num=200,
+        trees_num=PLAYOFF_TREE_NO,
         depth=MAX_DEPTH,
         features_max=MAX_FEATURES
     )
@@ -385,11 +448,11 @@ def run(): #runs predictions on the model using best hyperparameters
     # model 1: CONFERENCE FINALS
     train_cf_df = train_df[train_df["MADE_PLAYOFFS"] == 1]
 
-    X_train_cf = train_cf_df[feature_cols].to_numpy()
+    X_train_cf = train_cf_df[FEATURES].to_numpy()
     y_train_cf = train_cf_df["MADE_CONF_FINALS"].to_numpy()
 
     conf_forest = RandomForest(
-        trees_num=200,
+        trees_num=CONF_TREE_NO,
         depth=MAX_DEPTH,
         features_max=MAX_FEATURES
     )
@@ -418,17 +481,25 @@ def run(): #runs predictions on the model using best hyperparameters
 
     future_df["PRED_MADE_PLAYOFFS"] = playoff_predictions
     future_df["PRED_MADE_CONF_FINALS"] = conf_predictions
+    future_df["PRED_PLAYOFF_PROB"] = playoff_probs
+    future_df["PRED_CONF_FINALS_PROB"] = conf_probs
 
-    output_cols = [
-        "TEAM_NAME",
-        "SEASON_ID",
-        "PRED_MADE_PLAYOFFS",
-        "PRED_MADE_CONF_FINALS",
-    ]
+    print(future_df[OUTPUT_COLS])
 
-    print(future_df[output_cols])
+    future_df[OUTPUT_COLS].to_csv(OUTPUT_PRED_DEST, index=False)
 
-    future_df[output_cols].to_csv("../eval/forest_output_predictions/forest_2025_26_predictions.csv", index=False)
+    stats = {
+        "predict_season": PREDICT_SEASON,
+        "use_per_100": PER_100,
+        "max_depth": MAX_DEPTH,
+        "max_features": MAX_FEATURES,
+        "playoff_trees": PLAYOFF_TREE_NO,
+        "conference_trees": CONF_TREE_NO,
+        "predicted_playoff_teams": int(sum(playoff_predictions)),
+        "predicted_conference_finalists": int(sum(conf_predictions))
+    }
+
+    pd.DataFrame([stats]).to_csv(OUTPUT_STAT_DEST, index=False)
 
 if __name__ == "__main__":
 
