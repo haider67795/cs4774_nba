@@ -1,4 +1,4 @@
-
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import json
@@ -7,7 +7,7 @@ import os
 CONFIG_PATH = "configs/random_forest_config.json"
 
 np.random.seed(42) #to make testing reproducable
-TEST = TUNE = MAX_DEPTH = MAX_FEATURES = TUNE_SEASON = PREDICT_SEASON = \
+TEST = TUNE = MAX_DEPTH = MAX_FEATURES = TUNE_SEASON_START = PREDICT_SEASON = TRAIN_SEASON_END = \
     TRAINING_DATA = FEATURES = PER_100 = PLAYOFF_TREE_NO = CONF_TREE_NO = \
     OUTPUT_PRED_DEST = OUTPUT_STAT_DEST = OUTPUT_TUNE_DEST = OUTPUT_COLS =  OUTPUT_TUNE_STATS_DEST = None
 STAB_CONST = 1e-10
@@ -26,21 +26,28 @@ def add_per_100_features(df):
 
     return df
 
+def setup_mode():
+    global TEST, TUNE
+    config = load_config()
+
+    TUNE = config["tune"]
+    TEST = config["test"]
+
+
 def setup_model():
-    global TEST, TUNE, MAX_DEPTH, MAX_FEATURES, PREDICT_SEASON, TUNE_SEASON, \
+    global TEST, TUNE, MAX_DEPTH, MAX_FEATURES, PREDICT_SEASON, TUNE_SEASON_START, TRAIN_SEASON_END, \
         TRAINING_DATA, PER_100, FEATURES, PLAYOFF_TREE_NO, CONF_TREE_NO, \
         OUTPUT_PRED_DEST, OUTPUT_STAT_DEST, OUTPUT_TUNE_DEST, OUTPUT_COLS, OUTPUT_TUNE_STATS_DEST
 
     config = load_config()
     df = pd.read_csv(config["training_data"])
 
-    TEST = config["test"]
-    TUNE = config["tune"]
     PER_100 = config["use_per_100"]
     MAX_DEPTH = config["max_depth"]
     MAX_FEATURES = config["max_features"]
     PREDICT_SEASON = config["predict_season"]
-    TUNE_SEASON = config["tune_season"]
+    TUNE_SEASON_START = config["tune_season_start"]
+    TRAIN_SEASON_END = config["train_season_end"]
     TRAINING_DATA = config["training_data"]
     PLAYOFF_TREE_NO = config["playoff_trees"]
     CONF_TREE_NO = config["conference_trees"]
@@ -284,9 +291,12 @@ def tune_setup(model_no=0):
         model_name = "Conference Finals"
         df = df[df["MADE_PLAYOFFS"] == 1]
 
-    train_df = df[df["SEASON_ID"] != TUNE_SEASON]
-    test_df = df[df["SEASON_ID"] == TUNE_SEASON]
+    train_df = df[df["SEASON_ID"] <= TRAIN_SEASON_END]
 
+    test_df = df[
+        (df["SEASON_ID"] >= TUNE_SEASON_START) &
+        (df["SEASON_ID"] != PREDICT_SEASON)
+        ]
 
     X_train = train_df[FEATURES].to_numpy()
     X_test = test_df[FEATURES].to_numpy()
@@ -502,6 +512,8 @@ def run(): #runs predictions on the model using best hyperparameters
     pd.DataFrame([stats]).to_csv(OUTPUT_STAT_DEST, index=False)
 
 if __name__ == "__main__":
+
+    setup_mode()
 
     if TEST:
         runTest()

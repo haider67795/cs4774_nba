@@ -1,0 +1,7 @@
+model,max_depth,max_features,trees,f1,actual_positives,predicted_positives
+Playoff Qualification,7,3,5,0.8714285713776939,64,76
+Playoff Qualification,7,3,10,0.8970588234782656,64,72
+Playoff Qualification,7,3,20,0.8970588234782656,64,72
+Playoff Qualification,7,3,50,0.8857142856633878,64,76
+Playoff Qualification,7,3,100,0.8857142856633878,64,76
+Playoff Qualification,7,3,200,0.8857142856633878,64,76
