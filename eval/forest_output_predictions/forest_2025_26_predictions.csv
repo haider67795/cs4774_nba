@@ -1,0 +1,31 @@
+TEAM_NAME,SEASON_ID,PRED_MADE_PLAYOFFS,PRED_MADE_CONF_FINALS,PRED_PLAYOFF_PROB,PRED_CONF_FINALS_PROB
+Atlanta Hawks,2025-26,1,0,0.8666666666666667,0.31
+Boston Celtics,2025-26,1,0,1.0,0.305
+Brooklyn Nets,2025-26,0,0,0.0,0.045
+Charlotte Hornets,2025-26,1,0,1.0,0.4
+Chicago Bulls,2025-26,0,0,0.0,0.18
+Cleveland Cavaliers,2025-26,1,0,1.0,0.36
+Dallas Mavericks,2025-26,0,0,0.0,0.035
+Denver Nuggets,2025-26,1,1,0.9666666666666667,0.545
+Detroit Pistons,2025-26,1,1,1.0,0.64
+Golden State Warriors,2025-26,0,0,0.5,0.205
+Houston Rockets,2025-26,1,0,1.0,0.21
+Indiana Pacers,2025-26,0,0,0.0,0.04
+LA Clippers,2025-26,1,0,0.7666666666666667,0.165
+Los Angeles Lakers,2025-26,1,0,0.7,0.295
+Memphis Grizzlies,2025-26,0,0,0.0,0.17
+Miami Heat,2025-26,1,0,1.0,0.245
+Milwaukee Bucks,2025-26,0,0,0.06666666666666667,0.27
+Minnesota Timberwolves,2025-26,1,0,1.0,0.31
+New Orleans Pelicans,2025-26,0,0,0.0,0.175
+New York Knicks,2025-26,1,1,1.0,0.435
+Oklahoma City Thunder,2025-26,1,1,1.0,0.54
+Orlando Magic,2025-26,0,0,0.6666666666666666,0.2
+Philadelphia 76ers,2025-26,0,0,0.26666666666666666,0.205
+Phoenix Suns,2025-26,1,0,0.7333333333333333,0.095
+Portland Trail Blazers,2025-26,0,0,0.2,0.12
+Sacramento Kings,2025-26,0,0,0.03333333333333333,0.055
+San Antonio Spurs,2025-26,1,0,1.0,0.26
+Toronto Raptors,2025-26,1,0,0.8666666666666667,0.38
+Utah Jazz,2025-26,0,0,0.0,0.38
+Washington Wizards,2025-26,0,0,0.03333333333333333,0.01
