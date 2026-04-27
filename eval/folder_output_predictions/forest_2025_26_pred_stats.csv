@@ -1,0 +1,2 @@
+predict_season,use_per_100,max_depth,max_features,playoff_trees,conference_trees,predicted_playoff_teams,predicted_conference_finalists
+2025-26,False,7,6,50,200,16,4
