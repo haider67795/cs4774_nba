@@ -1,0 +1,83 @@
+{
+  "training_data": "../data/(main)nba_labeled_dataset.csv",
+  "predict_season": "2025-26",
+  "train_season_end": "2020-21",
+  "tune_season_start": "2021-22",
+
+  "use_per_100": true,
+  "test": false,
+  "tune": false,
+
+  "playoff_max_depth": 6,
+  "playoff_max_features": 4,
+  "conf_max_depth": 2,
+  "conf_max_features": 3,
+  "playoff_trees": 50,
+  "conference_trees": 50,
+
+  "raw_features_playoff": [
+    "PLUS_MINUS",
+    "OFF_RATING_CUSTOM",
+    "FG_PCT",
+    "FG3_PCT",
+    "FT_PCT",
+    "AST",
+    "REB",
+    "TOV",
+    "BLK"
+  ],
+
+    "raw_features_conf": [
+      "PLUS_MINUS",
+      "OFF_RATING_CUSTOM",
+      "DEF_RATING_CUSTOM",
+      "NET_RATING",
+      "FG_PCT",
+      "FG3_PCT",
+      "FT_PCT",
+      "AST",
+      "REB",
+      "TOV",
+      "BLK",
+      "PLAYOFF_PROB"
+  ],
+
+  "per_100_features_playoff": [
+    "PLUS_MINUS",
+    "OFF_RATING_CUSTOM",
+    "DEF_RATING_CUSTOM",
+    "FT_PCT",
+    "AST_PER_100",
+    "REB_PER_100",
+    "TOV_PER_100"
+  ],
+
+    "per_100_features_conf": [
+      "PLUS_MINUS",
+      "OFF_RATING_CUSTOM",
+      "DEF_RATING_CUSTOM",
+      "NET_RATING",
+      "FG_PCT",
+      "FG3_PCT",
+      "FT_PCT",
+      "AST_PER_100",
+      "REB_PER_100",
+      "TOV_PER_100",
+      "BLK_PER_100",
+      "PLAYOFF_PROB"
+  ],
+
+  "output_pred_dest": "../eval/forest_output_predictions/forest_2025_26_predictions.csv",
+  "output_stats_dest": "../eval/forest_output_predictions/forest_2025_26_pred_stats.csv",
+  "output_tune_dest": "../eval/forest_output_tuning/graphs",
+  "output_tune_stats_dest": "../eval/forest_output_tuning/stats",
+
+  "output_cols": [
+    "TEAM_NAME",
+    "SEASON_ID",
+    "PRED_MADE_PLAYOFFS",
+    "PRED_MADE_CONF_FINALS",
+    "PRED_PLAYOFF_PROB",
+    "PRED_CONF_FINALS_PROB"
+  ]
+}
