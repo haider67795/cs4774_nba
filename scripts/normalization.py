@@ -15,6 +15,8 @@ def normalize_nba_data(input_file, output_file, is_playoffs=False):
         stats_to_normalize = ['AST', 'REB', 'TOV', 'BLK']
         for stat in stats_to_normalize:
             df[f'{stat}_PER_100'] = (df[stat] / df['POSS']) * 100
+        
+        df['PIE_CON_A'] = (df['PIE_CON']+1)**5
 
         # 3. Save the new file
         df.to_csv(output_file, index=False)
@@ -27,8 +29,8 @@ def normalize_nba_data(input_file, output_file, is_playoffs=False):
 
 
 # Apply to Regular Season
-normalize_nba_data('data/nba_regular_season_2004_2026.csv',
-                   'data/nba_reg_normalized.csv')
+normalize_nba_data('nba_regular_season_2004_2026_r.csv',
+                   'nba_reg_normalized_r.csv')
 
 # Apply to Playoffs
-normalize_nba_data('data/nba_playoffs_2004_2026.csv', 'data/nba_ply_normalized.csv')
+normalize_nba_data('nba_playoffs_2004_2026_r.csv', 'nba_ply_normalized_r.csv')

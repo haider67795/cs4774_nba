@@ -70,6 +70,7 @@ def prepare_and_analyze_nba_data(reg_path, ply_path, output_path):
     print("\n--- Feature Averages by Conference Finals Achievement ---")
     profiles = analysis_df.groupby('MADE_CONF_FINALS')[features].mean()
     print(profiles)
+    print(target_corr.sort_values(by='MADE_CONF_FINALS', ascending=False))
 
     # 6. Save Processed Dataset for XGBoost Training
     combined.to_csv(output_path, index=False)

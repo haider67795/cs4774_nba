@@ -3,7 +3,7 @@ import time
 from nba_api.stats.endpoints import leaguegamelog
 
 
-def final_robust_patch(reg_file='data/nba_regular_season_2004_2026.csv', ply_file='data/nba_playoffs_2004_2026.csv'):
+def final_robust_patch(reg_file='nba_regular_season_2004_2026_r.csv', ply_file='nba_playoffs_2004_2026_r.csv'):
     # Targeting the specific failures from your last run
     targets = [
         ('2011-12', 'Playoffs'),
@@ -96,7 +96,7 @@ def final_robust_patch(reg_file='data/nba_regular_season_2004_2026.csv', ply_fil
 
 import pandas as pd
 
-def add_defensive_metrics(reg_file='data/nba_regular_season_2004_2026.csv', ply_file='data/nba_playoffs_2004_2026.csv'):
+def add_defensive_metrics(reg_file='nba_regular_season_2004_2026_r.csv', ply_file='nba_playoffs_2004_2026_r.csv'):
     # Process both the regular season and playoff files
     files = [reg_file, ply_file]
 
