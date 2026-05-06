@@ -1,0 +1,12 @@
+  "raw_features": [
+    "PLUS_MINUS",
+    "OFF_RATING_CUSTOM",
+    "FG_PCT",
+    "FG3_PCT",
+    "FT_PCT",
+    "AST",
+    "REB",
+    "TOV",
+    "BLK"
+  ],
+

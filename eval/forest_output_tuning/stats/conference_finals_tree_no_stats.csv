@@ -1,0 +1,7 @@
+model,max_depth,max_features,trees,f1,actual_positives,predicted_positives
+Conference Finals,7,3,5,0.31578947363379506,16,22
+Conference Finals,7,3,10,0.199999999966,16,4
+Conference Finals,7,3,20,0.49999999994687505,16,16
+Conference Finals,7,3,50,0.21052631576066486,16,3
+Conference Finals,7,3,100,0.36363636359338847,16,6
+Conference Finals,7,3,200,0.26086956517277887,16,7
